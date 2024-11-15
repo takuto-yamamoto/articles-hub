@@ -351,3 +351,17 @@ const inferFields = (data: Record<string, any>, maxDepth: number) => {
 以上で、基本的な部分更新の実装は完了です。
 
 ## 部分削除
+
+部分削除は、部分更新のリクエストに `NULL` を許容することで実現できます。
+
+例えば、`bio` 属性を削除したい場合、以下のようにリクエストすることで部分削除が可能です。
+
+```plaintext
+PATCH /users/:userId
+
+{
+  "bio": null,
+}
+```
+
+このような部分削除を許容する場合、DB スキーマや API の型バリデーションにおいて、null 値を許容する必要がある点に注意してください。
