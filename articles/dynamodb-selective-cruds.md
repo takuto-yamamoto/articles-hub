@@ -1,5 +1,3 @@
-# API Gateway + Lambda + DynamoDB で部分取得・部分更新・部分削除を実装する
-
 大規模なデータセットを CRUD する場合、効率性を保ちながらデータを操作するには部分的な取得/更新/削除操作が重要です。
 
 この記事では、API Gateway, Lambda, DynamoDB を用いた一般的な AWS サーバレス構成における、部分 CRUD に対応した 汎用的な REST API を実装することを目指します。

@@ -1,0 +1,15 @@
+{
+  "name": "articles-hub",
+  "version": "1.0.0",
+  "description": "zenn や qiita への記事投稿用",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "zenn-cli": "^0.1.158"
+  }
+}
