@@ -1,8 +1,8 @@
-# API Gateway + Lambda + DynamoDB で部分的な CRUD 操作を実装する
+# API Gateway + Lambda + DynamoDB で部分取得・部分更新・部分削除を実装する
 
-大規模なデータセットを CRUD する場合、効率性を保ちながらデータを操作するには部分的な取得/更新/削除操作が重要であり、これは DynamoDB でも然りです。
+大規模なデータセットを CRUD する場合、効率性を保ちながらデータを操作するには部分的な取得/更新/削除操作が重要です。
 
-この記事では、API Gateway, Lambda, DynamoDB を用いた一般的な AWS サーバレス構成における、部分 CRUD に対応した REST API を実装することを目指します。
+この記事では、API Gateway, Lambda, DynamoDB を用いた一般的な AWS サーバレス構成における、部分 CRUD に対応した 汎用的な REST API を実装することを目指します。
 
 :::message
 本記事で実装する API および IaC のコードの全文は、[こちらのリポジトリ](https://github.com/takuto-yamamoto/aws-dynamodb-selective-cruds)で公開しています。
@@ -10,7 +10,7 @@
 
 ## 部分取得
 
-例えば、DynamoDB のテーブル上に以下の User エンティティがあるとします
+以下の `User` エンティティを考えます
 
 ```typescript
 type User = {
@@ -31,26 +31,26 @@ type User = {
 
 ### 1. 取得したい属性を指定する
 
-リクエスト側で属性を指定するための一般的な方法は、クエリパラメータを用いることです。
+レスポンスデータの取得属性を絞るための一般的な手段として、クエリパラメータが挙げられます。
 
 例えば、`username` 属性のみを取得する場合は、`GET /users/:userId?field=username` のようになります。
 
 あるいは、`username` と `bio` 属性など、複数の属性を取得する場合、 `?field=username&field=bio` のようになるでしょう。
 
-API Gateway + Lambda の場合は、Lambda ハンドラ内で以下のように `field` パラメータを受け取ります。
+:::message
+`?fields=username,bio` のような実装も一般的です。
+:::
+
+今回のように、API Gateway + Lambda の場合は、Lambda ハンドラ内で以下のように `field` パラメータを受け取ります。
 
 ```typescript
 // 存在しない場合は[]にフォールバック
 const fields = event.multiValueQueryStringParameters?.field ?? [];
 ```
 
-:::message
-複数の属性を取得する場合は `?fields=username,bio` のような実装も一般的です。
-:::
-
 ### 2. 指定した属性のみ取得する
 
-受け取った `field` パラメータは、DynamoDB へのクエリに、[ProjectionExpression](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html) として反映させる必要があります。
+受け取った `field` パラメータは、[ProjectionExpression](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html) として DynamoDB へのクエリに反映させる必要があります。
 
 例えば、`username` 属性 と `bio` 属性を取得したい場合は `ProjectionExpression: 'username, bio'` となります。
 
@@ -74,15 +74,16 @@ if (fields.length > 0) {
 
 `ProjectionExpression` パラメータには、DynamoDB の予約語( `Name` や `Size` 等)を使用できないという制約があります。
 
-この制約に対応するためには、[ExpressionAttributeNames](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html) によるエイリアスを使用します。
+この制約に対応するために、[ExpressionAttributeNames](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html) によるエイリアスを使用します。
 
 :::message
-`ExpressionAttributeNames` や 後述の `ExpressionAttributeValues` を使用することは、DynamoDB の予約語を悪用した NoSQL インジェクションの対策にもなります。
+`ExpressionAttributeNames` や 後述の `ExpressionAttributeValues` を使用することは、DynamoDB の予約語を悪用した NoSQL インジェクションの対策としても機能します。
 :::
 
 例えば、 `Name` 属性と `Size` 属性を取得したい場合は
 
 ```typescript
+// エイリアスされた属性名で構成される
 input.ProjectionExpression = '#attr0, #attr1';
 input.ExpressionAttributeNames = {
   '#attr0': 'Name',
@@ -115,7 +116,7 @@ input.ExpressionAttributeNames = expressionAttributeNames;
 
 ### 4. 深さのある属性に対応する
 
-以下のような `preferences` 属性を追加し、`preference.language` 属性だけを更新すること考えます。
+既存の `User` エンティティに、以下のような `preferences` 属性を追加し、`preference.language` 属性だけを取得すること考えます。
 
 ```typescript
 type User = {
@@ -130,7 +131,9 @@ type User = {
 };
 ```
 
-この場合、`?field=preference.language` のようなパラメータ指定が考えられますが、現状の実装だと DynamoDB は 「 `preference` 属性の `language` 属性の値」ではなく、「 `preference.language` という 1 階層の属性の値」を取得しようとします。
+この場合、`?field=preference.language` のようなパラメータ指定が考えられます。
+
+しかしながら、このように指定した場合 DynamoDB は 「 `preference` 属性の `language` 属性の値」ではなく、「 `preference.language` という 1 階層の属性の値」を取得しようとする仕様を持ちます。
 
 これを防ぐために、以下のように `ExpressionAttributeNames` と `ProjectionExpression` を設定する必要があります。
 
@@ -184,7 +187,7 @@ const fieldParts = field.split('.').slice(0, maxDepth);
 1. 更新したい属性を指定する
 2. 指定した属性のみ更新する
 3. 特殊な属性や深い属性の更新に対応する
-4. 暗黙的に部分更新する
+4. 【new!】暗黙的に部分更新する
 
 ### 1. 更新したい属性を指定する
 
@@ -228,7 +231,7 @@ updateExpression += fields
 
 部分取得の場合同様、DynamoDB の予約語や、深い属性の問題に対応する必要があります。
 
-基本的な考え方は部分取得の場合と同じですが、部分更新の場合は、属性名ではなく対応する値においても予約語を回避する必要があります。
+さらに部分更新の場合は、属性名に対応する「値」においても、予約語を回避する必要があります。
 
 例えば、 `preferences.language` 属性を、`jp` に更新したい場合は、
 
@@ -300,11 +303,10 @@ function getNestedValue<T>(
 
 ### 4. 暗黙的に部分更新する
 
-以下のような、`field` パラメータが指定されていないリクエストが送信された場合は、API はどのような挙動をとるべきでしょうか？
+以下のようなリクエストが送信された場合、API はどのような挙動をとるべきでしょうか？
 
 ```plaintext
 PATCH /users/:userId
-
 {
   "username": "ユーザ1_更新",
   "preferences": {
@@ -313,9 +315,9 @@ PATCH /users/:userId
 }
 ```
 
-`username` 属性および、`preferences.language` 属性のみが更新され、他の属性が既存の値のままである場合に、直感的で使いやすいと感じるのではないでしょうか。
+他の属性には影響を与えずに、`username` 属性と `preferences.language` 属性だけ更新されて欲しいですよね。
 
-このような挙動を実現するためには、`field` パラメータが指定されない場合に、リクエストボディから動的に `field` を計算する機能を実装する必要があります。
+このような挙動を実現するためには、`field` パラメータが指定されない場合に、リクエストボディから動的に `field` を計算する必要があります。
 
 リクエストボディから `field` を計算する関数は、以下のように実装できます。
 
@@ -358,17 +360,18 @@ const inferFields = (data: Record<string, any>, maxDepth: number) => {
 
 ```plaintext
 PATCH /users/:userId
-
 {
   "bio": null,
 }
 ```
 
-このような部分削除を許容する場合、DB スキーマや API の型バリデーションにおいて、null 値を許容する必要がある点に注意してください。
+:::message
+null による部分削除を許容する場合、DB や API のスキーマ側でも null を許容する必要があることに注意してください。
+:::
+
+以上で、基本的な部分削除の実装は完了です。
 
 ## 残存課題
-
-ここからは、以上の実装ではカバーしきれないケースや、部分 CRUD 操作によるトレードオフについて、残存課題として記載します。
 
 ### 属性の完全な削除
 
@@ -378,30 +381,28 @@ PATCH /users/:userId
 
 ```plaintext
 PATCH /users/:userId?field=preferences.notifications
-
 {
   "preference": {},
 }
 ```
 
-ただし注意点として、DynamoDB において属性を削除する場合は、`UpdateExpression` の `REMOVE` 句を使用する必要があります。
+ただし注意点として、DynamoDB において属性そのものを削除する場合は、`UpdateExpression` の `REMOVE` 句を使用する必要があります。
 
-「指定した `field` に対応する値が `undefined` であった場合は `REMOVE` 句を使用する」という条件分岐が追加で必要になります。
+「指定した `field` に対応する値が `undefined` であった場合は `REMOVE` 句を使用する」という条件分岐が追加する必要があるでしょう。
 
 ### トレードオフ
 
-以上の実装から分かる通り、部分 CRUD の実装は複雑であり、その実装細部はインフラ環境に大きく依存します。
+以上の内容から読み取れる通り、部分 CRUD の実装は複雑です。またその細部は、使用するインフラ環境に大きく依存します。
 
-一方で、一つのエンドポイントに対して部分操作をを実装する場合は、一貫性の観点から全てのエンドポイントについて部分操作に対応する必要があるでしょう（そうでなければユーザーの誤解を招くでしょう）。
+さらに注意すべき点として、一つのリソースに対して部分 CRUD を実装する場合は、他の全てのリソースについても同様に部分 CRUD を実装しないと、ユーザーに大きな誤解を招いてしまいます。
 
-部分操作の実装にはどのようなメリットがあり、そのメリットが実装の複雑さに対して十分に効果を発揮するのかを検討することが重要だと感じます。
+以上の特性を踏まえた上で、実際の実装時には、実装メリットとコストをしっかりと天秤にかける必要がありそうです。
 
 ## 最後に
 
-今回記事投稿に至った理由としては、DynamoDB の部分 CRUD 操作についての既存情報をほとんど見つけられなかったためです。
+今回記事投稿に至った理由としては、DynamoDB の部分 CRUD 操作についての既存情報をほとんど見つけられなかったためです。故に本記事の内容についても、私個人が独自に考えた部分が多いです。
 
-故に本記事の内容についても、私個人が独自に考えた実装になります。
+まだまだ浅学の身ですので、仕様の考慮漏れや杜撰な実装等多くあるかと思いますが、何か一つでも参考になるエッセンスを提供できていれば幸いです。
 
-まだまだ浅学の身ですので、仕様の考慮漏れや実装が杜撰な箇所等多くあるかと思いますが、何か一つでも参考になるエッセンスを提供できていれば幸いです。
-
-物申したい箇所などございましたら、お気軽にコメントお願いします！
+最後まで読んでいただきありがとうございます！
+ご意見などございましたら、お気軽にコメントお願いします！
