@@ -1,2 +1,3 @@
 # articles-hub
-zennやqiitaへの記事投稿用
+
+zenn や qiita への記事投稿用
