@@ -131,8 +131,8 @@ type User = {
   preferences: {
     language: 'en' | 'jp';
     notifications: {
-      email: true;
-      sms: true;
+      email: boolean;
+      sms: boolean;
     };
   };
 };
