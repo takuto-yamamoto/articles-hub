@@ -1,12 +1,12 @@
-# dynamodb で部分取得・部分更新・部分削除を実装する
+# API Gateway + Lambda + DynamoDB で部分的な CRUD 操作を実装する
 
-DynamoDB は、AWS が提供するスケーラブルな NoSQL データベースで、柔軟性とパフォーマンスを両立したデータ管理を可能にします。
+大規模なデータセットを CRUD する場合、効率性を保ちながらデータを操作するには部分的な取得/更新/削除操作が重要であり、これは DynamoDB でも然りです。
 
-しかし、大規模なデータセットを扱う場合、効率性を保ちながらデータを操作するには、部分的な取得、更新、削除の技術を活用することが重要です。
+この記事では、API Gateway, Lambda, DynamoDB を用いた一般的な AWS サーバレス構成における、部分 CRUD に対応した REST API を実装することを目指します。
 
-この記事では、API Gateway, Lambda, DynamoDB を用いた一般的な AWS サーバレス構成における、部分 CRUD に対応した REST API の実装に関する Tips を提供します。
-
-なお本記事で実装する API および IaC のコードは、[こちらのリポジトリ](https://github.com/takuto-yamamoto/aws-dynamodb-selective-cruds)で公開しています（一部変更を加えてあります）。
+:::message
+本記事で実装する API および IaC のコードの全文は、[こちらのリポジトリ](https://github.com/takuto-yamamoto/aws-dynamodb-selective-cruds)で公開しています。
+:::
 
 ## 部分取得
 
@@ -24,7 +24,7 @@ type User = {
 
 以下のステップに分けて考えてみましょう。
 
-1. 取得したい属性をを指定する
+1. 取得したい属性を指定する
 2. 指定した属性のみ取得する
 3. 特殊な名前を持つ属性に対応する
 4. 深さのある属性に対応する
@@ -33,17 +33,20 @@ type User = {
 
 リクエスト側で属性を指定するための一般的な方法は、クエリパラメータを用いることです。
 
-`username`属性のみを取得する場合は、`GET /users/:userId?field=username` のようになります。
+例えば、`username`属性のみを取得する場合は、`GET /users/:userId?field=username` のようになります。
 
-`username`と`bio`属性など、複数の属性を取得する場合、`?field=username&field=bio` のようになるでしょう。
+あるいは、`username`と`bio`属性など、複数の属性を取得する場合、`?field=username&field=bio` のようになるでしょう。
 
 API Gateway + Lambda の場合は、Lambda ハンドラ内で以下のように`field`パラメータを受け取ります。
 
 ```typescript
-const fields = event.multiValueQueryStringParameters?.field ?? []; // 存在しない場合は[]にフォールバック
+// 存在しない場合は[]にフォールバック
+const fields = event.multiValueQueryStringParameters?.field ?? [];
 ```
 
-なお補足として、複数属性の場合は`?fields=username,bio`のような実装も一般的です。ただし今回は、APIGateway がカンマ区切りのクエリパラメータを自動でパースしてくれないため、不採用としています。
+:::message
+複数の属性を取得する場合は `?fields=username,bio` のような実装も一般的です。
+:::
 
 ### 2. 指定した属性のみ取得する
 
@@ -55,7 +58,7 @@ const fields = event.multiValueQueryStringParameters?.field ?? []; // 存在し�
 
 ```typescript
 const input: GetCommandInput = {
-  TableName: this.tableName
+  TableName: tableName
   Key: { id: userId },
 };
 
@@ -73,7 +76,7 @@ if (fields.length > 0) {
 
 この制約に対応するためには、[ExpressionAttributeNames](https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html) によるエイリアスを使用します。
 
-例えば、`Name`と`Size`属性を取得したい場合は
+例えば、 `Name` 属性と `Size` 属性を取得したい場合は
 
 ```typescript
 input.ProjectionExpression = '#attr0, #attr1';
@@ -88,12 +91,18 @@ input.ExpressionAttributeNames = {
 任意の`field`パラメータに対しては、
 
 ```typescript
+// エイリアスオブジェクトの初期化
 const expressionAttributeNames: Record<string, string> = {};
+
+// プレースホルダーを用いた projectedFields を計算
 const projectedFields = fields.map((field, i) => {
+  // プレースホルダを生成し、実際の field にエイリアス
   const placeholder = `#attr${i}`;
   expressionAttributeNames[placeholder] = field;
   return placeholder;
 });
+
+// コマンドinputにエイリアスを設定
 input.ProjectionExpression = projectedFields.join(', ');
 input.ExpressionAttributeNames = expressionAttributeNames;
 ```
@@ -102,7 +111,7 @@ input.ExpressionAttributeNames = expressionAttributeNames;
 
 ### 4. 深さのある属性に対応する
 
-以下のような `preferences` 属性が追加された場合に、`preference.language`だけを更新したい場合、どうすればいいでしょうか？
+以下のような `preferences` 属性を追加し、`preference.language`だけを更新すること考えます。
 
 ```typescript
 type User = {
@@ -117,7 +126,9 @@ type User = {
 };
 ```
 
-この場合、`?field=preference.language`のようなパラメータ指定が考えられますが、これを DynamoDB へのクエリに正確に反映させるためには、以下のように`ExpressionAttributeNames`と`ProjectionExpression`を設定する必要があります。
+この場合、`?field=preference.language`のようなパラメータ指定が考えられますが、現状の実装だと DynamoDB は 「 `preference` 属性の `language` 属性の値」ではなく、「`preference.language` という 1 階層の属性の値」を取得しようとします。
+
+これを防ぐために、以下のように`ExpressionAttributeNames`と`ProjectionExpression`を設定する必要があります。
 
 ```typescript
 input.ProjectionExpression = '#attr0_0.#attr0-1'; // 各階層ごとにエイリアスが必要
@@ -127,7 +138,7 @@ input.ExpressionAttributeNames = {
 };
 ```
 
-深さのある任意の`field`に対応するためには、
+任意のケースに対応するためには、
 
 ```typescript
 const expressionAttributeNames: Record<string, string> = {};
@@ -149,9 +160,11 @@ input.ExpressionAttributeNames = expressionAttributeNames;
 
 のように実装することができます。
 
-ただし、このままだといくらでも深い`field`を指定できてしまい、計算のためのリソース/時間を無駄に消費するため、`field`の深さを制限しておきます。
+ただしこのままだと、いくらでも深い`field`を指定できてしまうため、`field`の深さを制限しておきます。
 
 ```typescript
+// 3階層目以降の属性は個別に取得できない
+// preferences.notifications.sms -> ['preferences', 'notifications']
 const maxDepth = 2;
 const fieldParts = field.split('.').slice(0, maxDepth);
 ```
