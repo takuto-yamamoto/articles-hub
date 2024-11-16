@@ -1,5 +1,5 @@
 ---
-title: 'API Gateway + Lambda + DynamoDB で部分取得・部分更新・部分削除を実装する'
+title: 'API Gateway + Lambda + DynamoDB で部分取得・更新・削除を実装する'
 emoji: '🐶'
 type: 'tech'
 topics: ['aws', 'serverless', 'restapi', 'dynamodb', 'apigateway']
@@ -7,7 +7,9 @@ published: true
 published_at: 2024-11-16 08:00
 ---
 
-大規模なデータセットを CRUD する場合、効率性を保ちながらデータを操作するには部分的な取得/更新/削除操作が重要です。
+## 概要
+
+大規模なデータセットを CRUD する場合、効率性を保ちながらデータを操作するには部分的な取得・更新・削除操作が重要です。
 
 この記事では、API Gateway, Lambda, DynamoDB を用いた一般的な AWS サーバレス構成における、部分 CRUD に対応した 汎用的な REST API を実装することを目指します。
 
@@ -343,7 +345,7 @@ const inferFields = (data: Record<string, any>, maxDepth: number) => {
       maxDepth > 1
     ) {
       // オブジェクトかつnull/配列ではない場合、深さ制限をかけた上で再起的に属性名を連結し、 field を生成する
-      const nestedFields = this.inferFields(value, maxDepth - 1).map(
+      const nestedFields = inferFields(value, maxDepth - 1).map(
         (part) => `${field}.${part}`
       );
       inferredFields.push(...nestedFields);
@@ -401,7 +403,7 @@ PATCH /users/:userId?field=preferences.notifications
 
 以上の内容から読み取れる通り、部分 CRUD の実装は複雑です。またその細部は、使用するインフラ環境に大きく依存します。
 
-さらに注意すべき点として、一つのリソースに対して部分 CRUD を実装する場合は、他の全てのリソースについても同様に部分 CRUD を実装しないと、ユーザーに大きな誤解を招いてしまいます。
+さらに注意すべき点として、一つのリソースに対して部分 CRUD を実装する場合は、他の全てのリソースについても同様に部分 CRUD を実装しないと、ユーザーの誤解を招くことになるでしょう。
 
 以上の特性を踏まえた上で、実際の実装時には、実装メリットとコストをしっかりと天秤にかける必要がありそうです。
 
