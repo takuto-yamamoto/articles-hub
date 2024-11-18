@@ -1,5 +1,5 @@
 ---
-title: 'API Gateway + Lambda + DynamoDB で部分取得・更新・削除を実装する'
+title: 'DynamoDB で部分取得・更新・削除の API を実装する'
 emoji: '🐶'
 type: 'tech'
 topics: ['aws', 'serverless', 'restapi', 'dynamodb', 'apigateway']
