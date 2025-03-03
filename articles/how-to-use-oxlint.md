@@ -1,12 +1,12 @@
 ---
-title: 'oxlint と eslint を共存させて爆速 lint 環境を手に入れる'
+title: 'oxlint と eslint を共存させて爆速 Lint 環境を手に入れる'
 emoji: '🐶'
 type: 'tech'
 topics: ['typescript', 'nodejs', 'react', 'eslint', 'oxlint']
 published: true
 ---
 
-rust 製爆速 linter こと oxlint を eslint と共存させることで、爆速 lint 環境を作りたいじゃ！！！
+rust 製の爆速 Linter こと oxlint を eslint と共存させることで、爆速 Lint 環境を作りたいじゃ！！！
 
 https://oxc.rs/docs/guide/usage/linter.html#features
 
@@ -18,7 +18,7 @@ https://oxc.rs/docs/guide/usage/linter.html#features
 - eslint や eslint プラグインに基づく 480 以上のルールをデフォルトで搭載
 - eslint のエコシステムを継承(`.eslintignore`, `.eslintrc.json`, 無効化コメント等)
 
-## eslint との共存
+## でも、実用には耐えないんでしょ？
 
 例えば oxlint では 、 自分がよく使う以下の import 系プラグインには未対応
 （[最新の対応状況](https://github.com/oxc-project/oxc/issues/481)）
@@ -31,7 +31,7 @@ https://oxc.rs/docs/guide/usage/linter.html#features
 - oxlint では未実装のルール/プラグインを eslint で実行
 - oxlint と eslint で重複する項目を oxlint 側でのみ実施
 
-するように設定できる
+するように設定できる！
 
 ### 設定方法
 
