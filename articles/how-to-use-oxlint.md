@@ -1,37 +1,53 @@
 ---
-title: 'oxlint と eslint を共存させて爆速 Lint 環境を手に入れる'
+title: 'oxlint で eslint を高速化させる'
 emoji: '🐶'
 type: 'tech'
 topics: ['typescript', 'nodejs', 'react', 'eslint', 'oxlint']
 published: true
 ---
 
-rust 製の爆速 Linter こと oxlint を eslint と共存させることで、爆速 Lint 環境を作りたいじゃ！！！
+rust 製の爆速 Linter こと oxlint で eslint を高速化したいんじゃ！！！
 
 https://oxc.rs/docs/guide/usage/linter.html#features
 
 というわけでレッツゴー！
+
+## eslint + typescript-eslint は遅い
+
+JavaScript におけるリンターのデファクトとなっている[ESLint](https://eslint.org/)
+また ESLint に TypeScript 対応を拡張する [typescript-eslint](https://typescript-eslint.io/) も広く使われている
+
+typescript-eslint がやってくれることは以下の 2 つ
+
+- TypeScript 構文を解析して AST を作成する
+- 型情報 Lint ルールの追加
+
+しかしながら、いかんせん**これが遅い**のである
 
 ## oxlint の特徴
 
 - 爆速([ESLint の 50~100 倍速い](https://github.com/oxc-project/bench-javascript-linter?tab=readme-ov-file#oxlint-vs-eslint-v9))
 - eslint や eslint プラグインに基づく 480 以上のルールをデフォルトで搭載
 - eslint のエコシステムを継承(`.eslintignore`, `.eslintrc.json`, 無効化コメント等)
+- ただし型情報 Lint ルールは存在しない
+  - [開発中ではある](https://github.com/oxc-project/oxc/issues/2180)
+  - oxc ツールチェーンの兄弟分として[ts パーサ](https://oxc.rs/docs/guide/usage/parser.html)も開発されている
 
-## でも、実用には耐えないんでしょ？
+## oxlint は実用に耐えうるのか？
 
-例えば oxlint では 、 自分がよく使う以下の import 系プラグインには未対応
+例えば oxlint では 、 自分がよく使う以下のプラグインには未対応
 （[最新の対応状況](https://github.com/oxc-project/oxc/issues/481)）
 
 - [eslint-plugin-import](https://github.com/import-js/eslint-plugin-import)
 - [eslint-plugin-unused-imports](https://github.com/sweepline/eslint-plugin-unused-imports)
+- [typescript-eslint](https://typescript-eslint.io/)
 
 こんな時に oxlint では
 
 - oxlint では未実装のルール/プラグインを eslint で実行
 - oxlint と eslint で重複する項目を oxlint 側でのみ実施
 
-するように設定できる！
+するように設定することで、(限定的にはなるものの) eslint を高速化できる！
 
 ### 設定方法
 
@@ -166,5 +182,5 @@ pre-commit に組み込むならこんな感じ
 
 ## 最後に
 
-linter はシフトレフトの要であり、CI や pre-commit など実行する機会は非常に多いです。
-読んでいただいた方の爆速 lint ライフに少しでも貢献できることを願っています！
+linter はシフトレフトの要であり、CI や pre-commit など実行する機会は非常に多いと思います。
+読んでいただいた方の lint ライフ高速化に少しでも貢献できることを願っています！
