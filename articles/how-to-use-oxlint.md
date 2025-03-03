@@ -30,7 +30,7 @@ typescript-eslint がやってくれることは以下の 2 つ
 - eslint や eslint プラグインに基づく 480 以上のルールをデフォルトで搭載
 - eslint のエコシステムを継承(`.eslintignore`, `.eslintrc.json`, 無効化コメント等)
 - ただし型情報 Lint ルールは存在しない
-  - [開発中ではある](https://github.com/oxc-project/oxc/issues/2180)
+  - [開発中ではあるっぽい？](https://github.com/oxc-project/oxc/issues/2180)
   - oxc ツールチェーンの兄弟分として[ts パーサ](https://oxc.rs/docs/guide/usage/parser.html)も開発されている
 
 ## oxlint は実用に耐えうるのか？
