@@ -14,7 +14,7 @@ https://oxc.rs/docs/guide/usage/linter.html#features
 
 ## eslint + typescript-eslint は遅い
 
-JavaScript におけるリンターのデファクトとなっている[ESLint](https://eslint.org/)
+JavaScript におけるリンターのデファクトとなっている [ESLint](https://eslint.org/)
 また ESLint に TypeScript 対応を拡張する [typescript-eslint](https://typescript-eslint.io/) も広く使われている
 
 typescript-eslint がやってくれることは以下の 2 つ
@@ -22,7 +22,7 @@ typescript-eslint がやってくれることは以下の 2 つ
 - TypeScript 構文を解析して AST を作成する
 - 型情報 Lint ルールの追加
 
-しかしながら、いかんせん**これが遅い**のである
+しかしながら、いかんせん**この 2 つを組み合わせると遅い**のである
 
 ## oxlint の特徴
 
