@@ -1,3 +1,11 @@
+---
+title: 'oxlint と eslint を共存させて爆速 lint 環境を手に入れる'
+emoji: '🐶'
+type: 'tech'
+topics: ['typescript', 'nodejs', 'react', 'eslint', 'oxlint']
+published: true
+---
+
 rust 製爆速 linter こと oxlint を eslint と共存させることで、爆速 lint 環境を作りたいじゃ！！！
 
 https://oxc.rs/docs/guide/usage/linter.html#features
