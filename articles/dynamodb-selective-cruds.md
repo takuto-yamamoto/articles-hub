@@ -3,8 +3,7 @@ title: 'DynamoDB で部分取得・更新・削除の API を実装する'
 emoji: '🐶'
 type: 'tech'
 topics: ['aws', 'serverless', 'restapi', 'dynamodb', 'apigateway']
-published: true
-published_at: 2024-11-16 08:00
+published: false
 ---
 
 ## 概要
@@ -268,7 +267,7 @@ let updateExpression = 'SET ';
 
 // 属性の深さを制限
 const targetFields = fields.map((field) =>
-  field.split('.').slice(0, maxFieldDepth).join('.')
+  field.split('.').slice(0, maxFieldDepth).join('.'),
 );
 
 // field ごとに更新式を生成し、カンマで結合
@@ -294,7 +293,7 @@ updateExpression += targetFields
 ```typescript
 function getNestedValue<T>(
   data: Record<string, any>,
-  field: string
+  field: string,
 ): T | undefined {
   let targetValue: any = data;
 
@@ -346,7 +345,7 @@ const inferFields = (data: Record<string, any>, maxDepth: number) => {
     ) {
       // オブジェクトかつnull/配列ではない場合、深さ制限をかけた上で再起的に属性名を連結し、 field を生成する
       const nestedFields = inferFields(value, maxDepth - 1).map(
-        (part) => `${field}.${part}`
+        (part) => `${field}.${part}`,
       );
       inferredFields.push(...nestedFields);
     } else {
