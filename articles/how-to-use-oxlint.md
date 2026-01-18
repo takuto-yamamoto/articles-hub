@@ -1,6 +1,6 @@
 ---
 title: 'oxlint で eslint を高速化させる'
-emoji: '🐶'
+emoji: '🐂'
 type: 'tech'
 topics: ['typescript', 'nodejs', 'react', 'eslint', 'oxlint']
 published: true
@@ -151,7 +151,7 @@ export default tseslint.config(
         },
       ],
     },
-  }
+  },
 );
 ```
 
